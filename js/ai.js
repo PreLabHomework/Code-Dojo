@@ -1,20 +1,11 @@
-// ai.js : Claude-powered layer.
-// Works two ways: (a) opened inside Claude = no key needed; (b) on your own site
-// with a personal Anthropic API key saved in Settings (stored in localStorage only).
+// ai.js : Claude-powered layer. Works when opened inside Claude (artifact preview);
+// degrades gracefully elsewhere.
 const AI = (() => {
   async function ask(prompt, maxTokens = 1200) {
-    const key = (window.State && State.get().anthropicKey || '').trim();
-    const headers = { 'Content-Type': 'application/json' };
-    if (key) {
-      headers['x-api-key'] = key;
-      headers['anthropic-version'] = '2023-06-01';
-      headers['anthropic-dangerous-direct-browser-access'] = 'true';
-    }
     const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', headers,
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
     });
-    if (!r.ok) throw new Error('API ' + r.status + (key ? ' (check your key/credits)' : ' (open inside Claude or add a key in Settings)'));
     const d = await r.json();
     return (d.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
   }

@@ -29,4 +29,4 @@ git remote add origin https://github.com/PreLabHomework/dojo.git
 git branch -M main
 git push -u origin main
 ```
-GitHub Pages: repo Settings > Pages > Deploy from branch > main / root. Site appears at https://prelabhomework.github.io/Code-Dojo/.
+GitHub Pages: repo Settings > Pages > Deploy from branch > main / root. Site appears at https://prelabhomework.github.io/dojo/.
