@@ -1,11 +1,20 @@
-// ai.js : Claude-powered layer. Works when opened inside Claude (artifact preview);
-// degrades gracefully elsewhere.
+// ai.js : Claude-powered layer.
+// Works two ways: (a) opened inside Claude = no key needed; (b) on your own site
+// with a personal Anthropic API key saved in Settings (stored in localStorage only).
 const AI = (() => {
   async function ask(prompt, maxTokens = 1200) {
+    const key = (window.State && State.get().anthropicKey || '').trim();
+    const headers = { 'Content-Type': 'application/json' };
+    if (key) {
+      headers['x-api-key'] = key;
+      headers['anthropic-version'] = '2023-06-01';
+      headers['anthropic-dangerous-direct-browser-access'] = 'true';
+    }
     const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers,
       body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
     });
+    if (!r.ok) throw new Error('API ' + r.status + (key ? ' (check your key/credits)' : ' (open inside Claude or add a key in Settings)'));
     const d = await r.json();
     return (d.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
   }
@@ -36,7 +45,7 @@ In under 100 words: one thing done well, one improvement (idiom, naming, efficie
 
   async function generateExercises(sectionName, lang, weakNotes) {
     const raw = await ask(`Generate 3 coding exercises for the section "${sectionName}" in ${lang === 'py' ? 'Python' : 'C++ (must run with only iostream, basic arrays, no STL containers)'}.
-${weakNotes ? 'Target these weaknesses: ' + weakNotes : ''}
+${weakNotes ? 'The student is struggling with these, target similar skills at slightly easier entry then ramp: ' + weakNotes : 'Match the section theme, ramp difficulty 1 to 3.'}${styleCtx()}
 Respond ONLY with a JSON array, no markdown fences. Each item:
 {"id":"gen-<random6>","t":"title","d":1|2|3,"p":"prompt (input via stdin, exact stdout specified)","s":"starter code","sol":"full solution","tests":[{"in":"stdin","out":"exact expected stdout"}],"h":["hint1","hint2"]}
 Programs must read stdin and write stdout exactly as specified. 2 tests each minimum.`, 3000);

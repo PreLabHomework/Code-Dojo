@@ -91,9 +91,15 @@ function viewSection(id) {
       <button class="btn info" id="gen">AI: generate 3 more exercises here</button>
     </div><div id="gen-out" class="small"></div>`;
   $('#gen').addEventListener('click', async () => {
-    $('#gen-out').textContent = 'Generating (needs Claude context)...';
+    $('#gen-out').textContent = 'Generating (needs API key in Settings, or open inside Claude)...';
     try {
-      const more = await AI.generateExercises(meta.n, langOf(id), '');
+      const S2 = State.get();
+      const all = Object.values(window.SECTIONS || {}).flat();
+      const weak = Object.entries(S2.attempts)
+        .filter(([k, v]) => v >= 3 && !S2.solved[k])
+        .map(([k]) => { const e = all.find(x => x.id === k); return e ? e.t : null; })
+        .filter(Boolean).slice(0, 6).join('; ');
+      const more = await AI.generateExercises(meta.n, langOf(id), weak);
       const g = State.get().generated; g[id] = (g[id] || []).concat(more); State.patch({ generated: g });
       viewSection(id);
     } catch (e) { $('#gen-out').textContent = 'Generator needs this app opened inside Claude, or the response was malformed. Try again there.'; }
@@ -217,6 +223,11 @@ function viewSettings() {
       <button class="btn primary" id="savejk">Save key</button>
     </div>
     <div class="card">
+      <p class="small"><b>Anthropic API key</b> (unlocks AI clues, reviews, style-learning and the problem generator on this site). Get one at console.anthropic.com. Stored in this browser only; NEVER commit it anywhere; personal use only since anyone with it can spend your credits.</p>
+      <input id="ak" class="inpt wide" placeholder="sk-ant-..." value="${esc(S.anthropicKey || '')}">
+      <button class="btn primary" id="saveak">Save key</button>
+    </div>
+    <div class="card">
       <p class="small"><b>Style profile</b> (learned in Playground, injected into AI clues/reviews):</p>
       <pre class="out">${esc(S.styleProfile || 'none yet - use Playground > Learn my style')}</pre>
     </div>
@@ -226,6 +237,7 @@ function viewSettings() {
       <button class="btn bad" id="wipe">Reset everything</button>
     </div>`;
   $('#savejk').addEventListener('click', () => { State.patch({ judge0Key: $('#jk').value }); alert('Saved.'); });
+  $('#saveak').addEventListener('click', () => { State.patch({ anthropicKey: $('#ak').value.trim() }); alert('Saved. AI features are live on this site now.'); });
   $('#exp').addEventListener('click', () => prompt('Copy:', JSON.stringify(State.get())));
   $('#imp').addEventListener('click', () => { const v = prompt('Paste export:'); if (v) { try { localStorage.setItem('dojo2', v); location.reload(); } catch (e) { alert('Bad JSON'); } } });
   $('#wipe').addEventListener('click', () => { if (confirm('Wipe everything?')) { localStorage.removeItem('dojo2'); location.reload(); } });
